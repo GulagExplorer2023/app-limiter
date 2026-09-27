@@ -1,9 +1,10 @@
 param(
-    [Parameter(Mandatory)][string]$Destination
+    [Parameter(Mandatory=$true)][string]$Destination
 )
 $ErrorActionPreference = 'Stop'
 try {
-    & (Join-Path $PSScriptRoot 'uninstall.ps1') -Destination $Destination -KeepFiles *> $null
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    & (Join-Path $scriptDir 'uninstall.ps1') -Destination $Destination -KeepFiles | Out-Null
     [Console]::Out.Write('Removed')
 } catch {
     [Console]::Out.Write($_.Exception.Message)

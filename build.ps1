@@ -40,10 +40,12 @@ Push-Location -LiteralPath $root
 try {
     & $fpc -Mobjfpc -O2 -Xs '-Fusrc' '-FUbuild' '-FEbuild' 'service\app_limiter_service.pas'
     if ($LASTEXITCODE -ne 0) { throw 'Service build failed.' }
+    & $fpc -Mobjfpc -O2 -Xs '-Fusrc' '-FUbuild' '-FEbuild' 'acceptance\driver_compat_probe.pas'
+    if ($LASTEXITCODE -ne 0) { throw 'Driver compatibility probe build failed.' }
     & $lazbuild '--bm=Release' '-B' 'panel\app_limiter.lpi'
     if ($LASTEXITCODE -ne 0) { throw 'Panel build failed.' }
 } finally {
     Pop-Location
 }
-Copy-Item -LiteralPath (Join-Path $build 'AppLimiter.exe'), (Join-Path $build 'app_limiter_service.exe'), (Join-Path $root 'assets\AppLimiter.ico'), (Join-Path $vendor 'x64\WinDivert.dll'), (Join-Path $vendor 'x64\WinDivert64.sys'), (Join-Path $vendor 'LICENSE') -Destination $dist -Force
+Copy-Item -LiteralPath (Join-Path $build 'AppLimiter.exe'), (Join-Path $build 'app_limiter_service.exe'), (Join-Path $build 'driver_compat_probe.exe'), (Join-Path $root 'assets\AppLimiter.ico'), (Join-Path $vendor 'x64\WinDivert.dll'), (Join-Path $vendor 'x64\WinDivert64.sys'), (Join-Path $vendor 'LICENSE') -Destination $dist -Force
 Write-Host "Build ready: $dist"

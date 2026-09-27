@@ -5,7 +5,8 @@ param(
     [string]$OwnerName = '',
     [string]$OwnerIdentity = '',
     [ValidateRange(0,1)][int]$DesktopShortcut = 1,
-    [ValidateRange(0,1)][int]$StartWithWindows = 1
+    [ValidateRange(0,1)][int]$StartWithWindows = 1,
+    [switch]$CheckPlatformOnly
 )
 $ErrorActionPreference = 'Stop'
 if ($OwnerIdentity) {
@@ -18,45 +19,56 @@ if (-not $OwnerSid) { $OwnerSid = [Security.Principal.WindowsIdentity]::GetCurre
 if (-not $OwnerName) { $OwnerName = $env:USERNAME }
 if ($OwnerSid -notmatch '^S-1-[0-9]+(?:-[0-9]+)+$') { throw 'Invalid owner SID.' }
 if ($OwnerName -notmatch '^[^\\/:*?"<>|\x00-\x1F]{1,128}$' -or
-    $OwnerName -in @('.', '..') -or $OwnerName.EndsWith(' ') -or $OwnerName.EndsWith('.')) {
+    @('.', '..') -contains $OwnerName -or $OwnerName.EndsWith(' ') -or $OwnerName.EndsWith('.')) {
     throw 'Invalid owner account name.'
 }
 if (-not $UserDataDir) {
     $UserDataDir = Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) (Join-Path 'AppLimiter\Users' $OwnerName)
 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$principal = [Security.Principal.WindowsPrincipal]::new($identity)
+$principal = New-Object Security.Principal.WindowsPrincipal -ArgumentList $identity
 $configFile = Join-Path $UserDataDir 'config.json'
 if (-not ('AppLimiterMachine' -as [type])) {
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public static class AppLimiterMachine {
-    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool IsWow64Process2(IntPtr process, out ushort processMachine, out ushort nativeMachine);
+    [DllImport("kernel32.dll")]
+    public static extern void GetNativeSystemInfo(IntPtr systemInfo);
 }
 '@
 }
-[System.UInt16]$processMachine = 0
-[System.UInt16]$nativeMachine = 0
-if (-not [AppLimiterMachine]::IsWow64Process2([AppLimiterMachine]::GetCurrentProcess(),
-    [ref]$processMachine, [ref]$nativeMachine)) {
-    throw 'Could not determine the Windows processor architecture.'
+$systemInfo = [Runtime.InteropServices.Marshal]::AllocHGlobal(64)
+try {
+    [AppLimiterMachine]::GetNativeSystemInfo($systemInfo)
+    $nativeMachine = [Runtime.InteropServices.Marshal]::ReadInt16($systemInfo)
+} finally {
+    [Runtime.InteropServices.Marshal]::FreeHGlobal($systemInfo)
 }
-$windowsBuild = [Environment]::OSVersion.Version.Build
-if (-not [Environment]::Is64BitOperatingSystem -or
-    $windowsBuild -lt 22000 -or $nativeMachine -ne 0x8664) {
-    throw 'App Limiter requires Windows 11 x64 (Intel or AMD). The bundled driver cannot run on Windows on ARM.'
+$windowsVersion = [Environment]::OSVersion.Version
+if (($windowsVersion.Major -lt 6) -or
+    (($windowsVersion.Major -eq 6) -and ($windowsVersion.Minor -lt 1)) -or
+    ($nativeMachine -ne 9)) {
+    throw 'App Limiter requires Windows 7 or later on a 64-bit Intel or AMD PC.'
+}
+if ($CheckPlatformOnly) {
+    Write-Host "Supported platform: Windows $windowsVersion, x64 architecture $nativeMachine"
+    return
 }
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    $arg = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -Destination "' + $Destination + '" -UserDataDir "' + $UserDataDir + '" -OwnerSid "' + $OwnerSid + '" -OwnerName "' + $OwnerName + '" -DesktopShortcut ' + $DesktopShortcut + ' -StartWithWindows ' + $StartWithWindows
+    $arg = '-NoProfile -ExecutionPolicy Bypass -File "' + $MyInvocation.MyCommand.Path + '" -Destination "' + $Destination + '" -UserDataDir "' + $UserDataDir + '" -OwnerSid "' + $OwnerSid + '" -OwnerName "' + $OwnerName + '" -DesktopShortcut ' + $DesktopShortcut + ' -StartWithWindows ' + $StartWithWindows
     $child = Start-Process -FilePath 'powershell.exe' -ArgumentList $arg -Verb RunAs -WindowStyle Hidden -Wait -PassThru
     if ($child.ExitCode -ne 0) { throw "Elevated installer failed with exit code $($child.ExitCode)." }
     exit
 }
-$root = Split-Path -Parent $PSCommandPath
-Start-Transcript -Path (Join-Path $root 'install.log') -Force | Out-Null
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$transcribing = $false
+try {
+    Start-Transcript -Path (Join-Path $root 'install.log') -Force | Out-Null
+    $transcribing = $true
+} catch {
+    # Some older PowerShell hosts cannot start a transcript.
+}
 $Destination = [IO.Path]::GetFullPath($Destination).TrimEnd('\')
 $programFilesRoot = [IO.Path]::GetFullPath([Environment]::GetFolderPath('ProgramFiles')).TrimEnd('\')
 if (-not [string]::Equals([IO.Path]::GetDirectoryName($Destination), $programFilesRoot,
@@ -69,7 +81,7 @@ if (-not (Test-Path -Path "Registry::HKEY_USERS\$OwnerSid")) {
 }
 $unsafeLocations = @([IO.Path]::GetPathRoot($Destination), $env:WINDIR,
     [Environment]::GetFolderPath('ProgramFiles'),
-    [Environment]::GetFolderPath('ProgramFilesX86'),
+    [Environment]::GetEnvironmentVariable('ProgramFiles(x86)'),
     [Environment]::GetFolderPath('CommonApplicationData'))
 if ($unsafeLocations | Where-Object { $_ -and [string]::Equals($_.TrimEnd('\'), $Destination, [StringComparison]::OrdinalIgnoreCase) }) {
     throw "Choose a dedicated App Limiter folder, not $Destination."
@@ -88,16 +100,30 @@ if (Test-Path -LiteralPath $Destination) {
     }
 }
 $dist = Join-Path $root 'dist\AppLimiter'
-$required = @('AppLimiter.exe', 'app_limiter_service.exe', 'AppLimiter.ico', 'WinDivert.dll', 'WinDivert64.sys', 'LICENSE')
+$required = @('AppLimiter.exe', 'app_limiter_service.exe', 'driver_compat_probe.exe', 'AppLimiter.ico', 'WinDivert.dll', 'WinDivert64.sys', 'LICENSE')
 foreach ($name in $required) {
     if (!(Test-Path -LiteralPath (Join-Path $dist $name))) { throw "Build first: missing $name" }
+}
+$probeOutput = & (Join-Path $dist 'driver_compat_probe.exe') 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0) {
+    throw "The bundled network driver cannot run on this Windows installation. $($probeOutput.Trim()) App Limiter was not changed."
+}
+function Get-FileSha256([string]$Path) {
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    $stream = [IO.File]::OpenRead($Path)
+    try {
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    } finally {
+        $stream.Dispose()
+        $algorithm.Dispose()
+    }
 }
 $stateDir = Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'AppLimiter'
 $stateFile = Join-Path $stateDir 'state.json'
 New-Item -ItemType Directory -Force -Path $Destination, $stateDir | Out-Null
 & icacls.exe $Destination '/inheritance:r' '/grant:r' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Could not secure the installation directory.' }
-foreach ($name in @('AppLimiter.exe', 'app_limiter_service.exe', 'AppLimiter.ico', 'WinDivert.dll', 'WinDivert64.sys', 'LICENSE', 'Uninstall.exe', 'uninstall.ps1', 'run_uninstall.ps1')) {
+foreach ($name in @('AppLimiter.exe', 'app_limiter_service.exe', 'driver_compat_probe.exe', 'AppLimiter.ico', 'WinDivert.dll', 'WinDivert64.sys', 'LICENSE', 'Uninstall.exe', 'uninstall.ps1', 'run_uninstall.ps1')) {
     $existingFile = Join-Path $Destination $name
     if (Test-Path -LiteralPath $existingFile) {
         & icacls.exe $existingFile '/reset' | Out-Null
@@ -115,14 +141,16 @@ if (!(Test-Path -LiteralPath $configFile)) {
         Copy-Item -LiteralPath $legacyConfig -Destination $configFile
     } else {
         $default = '{"version":1,"paused":false,"startMinimized":false,"darkTheme":true,"hotkey":"Ctrl+Alt+N","rules":[]}'
-        [IO.File]::WriteAllText($configFile, $default, [Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($configFile, $default, (New-Object Text.UTF8Encoding -ArgumentList $false))
     }
 }
 $panelPath = Join-Path $Destination 'AppLimiter.exe'
 $panelPaths = @($panelPath)
 if ($previousLocation) { $panelPaths += (Join-Path $previousLocation 'AppLimiter.exe') }
 foreach ($process in @(Get-Process -Name 'AppLimiter' -ErrorAction SilentlyContinue)) {
-    if ($process.Path -and ($panelPaths | Where-Object { [string]::Equals($_, $process.Path, [StringComparison]::OrdinalIgnoreCase) })) {
+    $processPath = ''
+    try { $processPath = $process.MainModule.FileName } catch {}
+    if ($processPath -and ($panelPaths | Where-Object { [string]::Equals($_, $processPath, [StringComparison]::OrdinalIgnoreCase) })) {
         $process | Stop-Process -Force
     }
 }
@@ -134,7 +162,7 @@ foreach ($name in $required) {
     $sourceFile = Join-Path $dist $name
     $destinationFile = Join-Path $Destination $name
     if ((Test-Path -LiteralPath $destinationFile) -and
-        ((Get-FileHash -LiteralPath $sourceFile).Hash -eq (Get-FileHash -LiteralPath $destinationFile).Hash)) {
+        ((Get-FileSha256 $sourceFile) -eq (Get-FileSha256 $destinationFile))) {
         continue
     }
     Copy-Item -LiteralPath $sourceFile -Destination $destinationFile -Force
@@ -146,9 +174,8 @@ if (!(Get-Service -Name 'AppLimiterService' -ErrorAction SilentlyContinue)) {
 } else {
     & sc.exe sdset AppLimiterService $serviceDacl
     if ($LASTEXITCODE -ne 0) { throw 'Could not repair service permissions.' }
-    $service = Get-CimInstance -ClassName Win32_Service -Filter "Name='AppLimiterService'"
-    $change = Invoke-CimMethod -InputObject $service -MethodName Change -Arguments @{ PathName = $binary; StartMode = 'Automatic' }
-    if ($change.ReturnValue -ne 0) { throw "Could not update service registration ($($change.ReturnValue))." }
+    & sc.exe config AppLimiterService binPath= $binary start= auto | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not update service registration.' }
 }
 & sc.exe description AppLimiterService 'Per-application traffic monitor and bandwidth limits'
 & sc.exe failure AppLimiterService reset= 86400 actions= restart/1000/restart/5000/restart/5000
@@ -156,7 +183,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not configure service recovery.' }
 & sc.exe sdset AppLimiterService $serviceDacl
 if ($LASTEXITCODE -ne 0) { throw 'Could not grant service control to the installing user.' }
 Start-Service -Name 'AppLimiterService'
-Write-Host "Service command: $((Get-CimInstance -ClassName Win32_Service -Filter "Name='AppLimiterService'").PathName)"
+Write-Host "Service command: $binary"
 $shortcutPath = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'App Limiter.lnk'
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
@@ -185,7 +212,7 @@ if ($StartWithWindows -eq 1) {
     Remove-ItemProperty -Path $runKey -Name AppLimiter
 }
 if ($previousLocation -and -not [string]::Equals($previousLocation.TrimEnd('\'), $Destination, [StringComparison]::OrdinalIgnoreCase)) {
-    foreach ($name in @('AppLimiter.exe', 'app_limiter_service.exe', 'AppLimiter.ico', 'WinDivert.dll', 'WinDivert64.sys', 'LICENSE', 'Uninstall.exe', 'uninstall.ps1', 'run_uninstall.ps1')) {
+    foreach ($name in @('AppLimiter.exe', 'app_limiter_service.exe', 'driver_compat_probe.exe', 'AppLimiter.ico', 'WinDivert.dll', 'WinDivert64.sys', 'LICENSE', 'Uninstall.exe', 'uninstall.ps1', 'run_uninstall.ps1')) {
         Remove-Item -LiteralPath (Join-Path $previousLocation $name) -Force -ErrorAction SilentlyContinue
     }
     Remove-Item -LiteralPath $previousLocation -ErrorAction SilentlyContinue
@@ -204,4 +231,4 @@ public static class AppLimiterShellIcons {
 [AppLimiterShellIcons]::SHChangeNotify(0x08000000, 0,
     [IntPtr]::Zero, [IntPtr]::Zero)
 Write-Host "Installed App Limiter for $OwnerName ($OwnerSid). Launch it from the Start Menu."
-Stop-Transcript | Out-Null
+if ($transcribing) { Stop-Transcript | Out-Null }

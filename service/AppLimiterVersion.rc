@@ -1,6 +1,6 @@
 1 VERSIONINFO
-FILEVERSION 1,3,9,0
-PRODUCTVERSION 1,3,9,0
+FILEVERSION 1,4,0,0
+PRODUCTVERSION 1,4,0,0
 FILEOS 0x40004
 FILETYPE 1
 BEGIN
@@ -10,11 +10,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "App Limiter"
       VALUE "FileDescription", "App Limiter Service"
-      VALUE "FileVersion", "1.3.9.0"
+      VALUE "FileVersion", "1.4.0.0"
       VALUE "InternalName", "app_limiter_service"
       VALUE "OriginalFilename", "app_limiter_service.exe"
       VALUE "ProductName", "App Limiter"
-      VALUE "ProductVersion", "1.3.9.0"
+      VALUE "ProductVersion", "1.4.0.0"
     END
   END
   BLOCK "VarFileInfo"

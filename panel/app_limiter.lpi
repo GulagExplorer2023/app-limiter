@@ -14,9 +14,9 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="1"/>
-      <MinorVersionNr Value="3"/>
-      <RevisionNr Value="9"/>
-      <StringTable ProductName="App Limiter" FileDescription="App Limiter" ProductVersion="1.3.9"/>
+      <MinorVersionNr Value="4"/>
+      <RevisionNr Value="0"/>
+      <StringTable ProductName="App Limiter" FileDescription="App Limiter" ProductVersion="1.4.0"/>
     </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="Release" Default="True"/>

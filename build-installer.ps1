@@ -3,7 +3,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
-$version = '1.3.9'
+$version = '1.4.0'
 $zip = Join-Path $root 'tools\nsis-3.12.zip'
 $compiler = Join-Path $root 'tools\nsis-3.12\makensis.exe'
 $expectedNsisHash = '56581F90DB321581C5381193D796FFFCF2D24B2F8FED2160A6C6A3BAA67F2C4F'
@@ -14,7 +14,7 @@ if (!(Test-Path -LiteralPath $compiler)) {
 }
 if (!$SkipBuild) { & (Join-Path $root 'build.ps1') }
 $dist = Join-Path $root 'dist\AppLimiter'
-foreach ($name in @('AppLimiter.exe','app_limiter_service.exe','AppLimiter.ico','WinDivert.dll','WinDivert64.sys','LICENSE')) {
+foreach ($name in @('AppLimiter.exe','app_limiter_service.exe','driver_compat_probe.exe','AppLimiter.ico','WinDivert.dll','WinDivert64.sys','LICENSE')) {
     if (!(Test-Path -LiteralPath (Join-Path $dist $name))) { throw "Missing payload: $name" }
 }
 foreach ($name in @('AppLimiter.exe', 'app_limiter_service.exe')) {
@@ -46,5 +46,13 @@ $setup = Join-Path $root "dist\AppLimiter-Setup-$version.exe"
 $hash = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 $checksumPath = Join-Path $root "dist\AppLimiter-Setup-$version.sha256"
 [IO.File]::WriteAllText($checksumPath, "$hash  AppLimiter-Setup-$version.exe`n", [Text.UTF8Encoding]::new($false))
+$driverCheckStage = Join-Path $root 'build\driver-check'
+New-Item -ItemType Directory -Force -Path $driverCheckStage | Out-Null
+Copy-Item -LiteralPath (Join-Path $dist 'driver_compat_probe.exe'), (Join-Path $dist 'WinDivert.dll'), (Join-Path $dist 'WinDivert64.sys'), (Join-Path $dist 'LICENSE'), (Join-Path $root 'packaging\run_driver_check.cmd'), (Join-Path $root 'packaging\driver_check_README.txt') -Destination $driverCheckStage -Force
+$driverCheckZip = Join-Path $root "dist\AppLimiter-Driver-Check-$version.zip"
+Compress-Archive -Path (Join-Path $driverCheckStage '*') -DestinationPath $driverCheckZip -Force
+$driverCheckHash = (Get-FileHash -LiteralPath $driverCheckZip -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText((Join-Path $root "dist\AppLimiter-Driver-Check-$version.sha256"), "$driverCheckHash  AppLimiter-Driver-Check-$version.zip`n", [Text.UTF8Encoding]::new($false))
 Write-Host "Installer ready: $setup"
 Write-Host "SHA-256: $hash"
+Write-Host "Driver check ready: $driverCheckZip"

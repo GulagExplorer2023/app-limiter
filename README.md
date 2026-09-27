@@ -8,7 +8,13 @@ App Limiter lets you control how much internet a Windows program can use. Set se
 2. Run it and approve the Windows administrator prompt. Setup lets you choose the install folder, desktop shortcut, and whether the app opens when you sign in.
 3. Open **App Limiter**. The background service starts automatically, including after a restart.
 
-This build supports **Windows 11, 64-bit, on Intel or AMD PCs**. Setup is for one Windows user account per computer. The installer is not code signed, so Windows may show a download warning.
+The current stable release supports **Windows 11, 64-bit, on Intel or AMD PCs**. Setup is for one Windows user account per computer. The installer is not code signed, so Windows may show a download warning.
+
+### Older Windows test build
+
+The 1.4.0 preview accepts Windows 7 SP1, Windows 8/8.1, Windows 10, and Windows 11 on x64 Intel or AMD PCs. **Windows 7 and 8 are not yet verified.** The bundled WinDivert 2.2.2 driver documents Windows 10/11; the preview installer now checks that its flow and network layers open before changing the installed app or service. A successful check is the first step, not proof that long-running traffic limits work on that OS.
+
+To help test an older PC, download `AppLimiter-Driver-Check-1.4.0.zip` from the [1.4.0 preview release](https://github.com/GulagExplorer2023/app-limiter/releases/tag/v1.4.0-rc1), extract it, then right-click `run_driver_check.cmd` and choose **Run as administrator**. Send the displayed result and the exact Windows version. If it passes, try the preview installer and test browsing, upload/download limits, blocking, restart, and several hours of service uptime. Windows 7 SP1 needs SHA-2 code-signing updates for modern signed drivers. The driver check ZIP is also created locally by `build-installer.ps1`.
 
 ## Use it
 

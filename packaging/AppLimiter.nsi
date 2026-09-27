@@ -5,7 +5,7 @@ Unicode true
 !include "x64.nsh"
 !include "nsDialogs.nsh"
 
-!define APP_VERSION "1.3.9"
+!define APP_VERSION "1.4.0"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\AppLimiter"
 
 Name "App Limiter"
@@ -13,7 +13,7 @@ OutFile "..\dist\AppLimiter-Setup-${APP_VERSION}.exe"
 InstallDir "$PROGRAMFILES64\AppLimiter"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "1.3.9.0"
+VIProductVersion "1.4.0.0"
 VIAddVersionKey "ProductName" "App Limiter"
 VIAddVersionKey "FileDescription" "App Limiter installer"
 VIAddVersionKey "FileVersion" "${APP_VERSION}"
@@ -134,7 +134,7 @@ Function .onInit
   StrCpy $DesktopShortcut 1
   StrCpy $StartWithWindows 1
   ${IfNot} ${RunningX64}
-    MessageBox MB_ICONSTOP "App Limiter requires Windows 11 x64 (Intel or AMD)."
+    MessageBox MB_ICONSTOP "App Limiter requires Windows 7 or later on a 64-bit Intel or AMD PC."
     Abort
   ${EndIf}
   StrCpy $PowerShell "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
@@ -179,6 +179,7 @@ Section "Install"
   SetOutPath "$PLUGINSDIR\stage\dist\AppLimiter"
   File "..\dist\AppLimiter\AppLimiter.exe"
   File "..\dist\AppLimiter\app_limiter_service.exe"
+  File "..\dist\AppLimiter\driver_compat_probe.exe"
   File "..\dist\AppLimiter\AppLimiter.ico"
   File "..\dist\AppLimiter\WinDivert.dll"
   File "..\dist\AppLimiter\WinDivert64.sys"
@@ -259,6 +260,7 @@ Section "Uninstall"
   ${EndIf}
   Delete "$INSTDIR\AppLimiter.exe"
   Delete "$INSTDIR\app_limiter_service.exe"
+  Delete "$INSTDIR\driver_compat_probe.exe"
   Delete "$INSTDIR\AppLimiter.ico"
   Delete "$INSTDIR\WinDivert.dll"
   Delete "$INSTDIR\WinDivert64.sys"

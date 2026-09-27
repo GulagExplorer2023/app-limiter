@@ -1,5 +1,19 @@
 # App Limiter release review
 
+## Version 1.4.0 legacy compatibility preview
+
+- The installer now uses `GetNativeSystemInfo` instead of `IsWow64Process2`,
+  which only exists on newer Windows. Its scripts avoid PowerShell features
+  unavailable on the Windows 7 and 8 baseline PowerShell versions.
+- An elevated preflight opens the bundled WinDivert flow and network layers
+  in sniff mode before copying files or stopping the installed service. If
+  either layer fails, setup reports the Windows error and leaves the existing
+  installation untouched.
+- A separate driver-check ZIP lets a tester run that preflight on Windows 7
+  or 8 without installing App Limiter. This WinDivert 2.2.2 package documents
+  Windows 10/11, so passing the preflight does not establish full legacy
+  support. An older-PC install and sustained traffic check are still needed.
+
 ## Code findings and fixes
 
 - Flow entries used open addressing with deletion markers. A long-running
