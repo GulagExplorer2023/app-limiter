@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="12"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <Title Value="App Limiter"/>
+      <Scaled Value="True"/>
+      <UseXPManifest Value="True"/>
+      <XPManifest>
+        <DpiAware Value="True/PM_V2"/>
+      </XPManifest>
+    </General>
+    <VersionInfo>
+      <UseVersionInfo Value="True"/>
+      <MajorVersionNr Value="1"/>
+      <MinorVersionNr Value="3"/>
+      <RevisionNr Value="9"/>
+      <StringTable ProductName="App Limiter" FileDescription="App Limiter" ProductVersion="1.3.9"/>
+    </VersionInfo>
+    <BuildModes Count="1">
+      <Item1 Name="Release" Default="True"/>
+    </BuildModes>
+    <RequiredPackages Count="1">
+      <Item1><PackageName Value="LCL"/></Item1>
+    </RequiredPackages>
+    <Units Count="2">
+      <Unit0><Filename Value="app_limiter.lpr"/><IsPartOfProject Value="True"/><UnitName Value="app_limiter"/></Unit0>
+      <Unit1><Filename Value="mainform.pas"/><IsPartOfProject Value="True"/><UnitName Value="mainform"/></Unit1>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <SearchPaths><OtherUnitFiles Value="..\src"/></SearchPaths>
+    <Target><Filename Value="..\build\AppLimiter"/></Target>
+    <CodeGeneration><Optimizations><OptimizationLevel Value="3"/></Optimizations></CodeGeneration>
+    <Linking>
+      <Debugging><GenerateDebugInfo Value="False"/><StripSymbols Value="True"/></Debugging>
+      <Options><Win32><GraphicApplication Value="True"/></Win32></Options>
+    </Linking>
+  </CompilerOptions>
+</CONFIG>

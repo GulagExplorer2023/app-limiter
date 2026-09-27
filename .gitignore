@@ -1,0 +1,32 @@
+# Build output and local installs
+/build/
+/dist/
+/install.log
+/uninstall.log
+
+# Extracted build dependencies; keep the pinned ZIP archives
+/third_party/WinDivert-2.2.2-A/
+/tools/nsis-3.12/
+/tools/gh-local/
+
+# Lazarus and Free Pascal output
+*.o
+*.ppu
+*.a
+*.exe
+*.res
+*.compiled
+*.lps
+*.bak
+
+# Test runs, screenshots and local state; keep test source and review notes
+/acceptance/**
+!/acceptance/*.pas
+!/acceptance/*.ps1
+!/acceptance/release_review.md
+!/acceptance/latency_verification.md
+/spike/bin/
+/spike/payload.bin
+/service/test_*.json
+/service/test_*.log
+/service/*.log
