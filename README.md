@@ -12,9 +12,9 @@ The current stable release supports **Windows 11, 64-bit, on Intel or AMD PCs**.
 
 ### Older Windows test build
 
-The 1.4.0 preview accepts Windows 7 SP1, Windows 8/8.1, Windows 10, and Windows 11 on x64 Intel or AMD PCs. **Windows 7 and 8 are not yet verified.** The bundled WinDivert 2.2.2 driver documents Windows 10/11; the preview installer now checks that its flow and network layers open before changing the installed app or service. A successful check is the first step, not proof that long-running traffic limits work on that OS.
+The 1.4.0 preview probes older x64 Intel/AMD Windows versions before installation. **Windows 7 SP1 failed the driver check with error 577 even after KB4490628, KB4474419, and a restart, so Windows 7 is not supported by this build.** Windows 8/8.1 remains untested. The bundled WinDivert 2.2.2 package documents Windows 10/11. The installer checks that its flow and network layers open before changing the installed app or service. A successful check is the first step, not proof that long-running traffic limits work on that OS.
 
-To help test an older PC, download `AppLimiter-Driver-Check-1.4.0.zip` from the [1.4.0 preview release](https://github.com/GulagExplorer2023/app-limiter/releases/tag/v1.4.0-rc1), extract it, then right-click `run_driver_check.cmd` and choose **Run as administrator**. Send the displayed result and the exact Windows version. If it passes, try the preview installer and test browsing, upload/download limits, blocking, restart, and several hours of service uptime. Windows 7 SP1 needs SHA-2 code-signing updates for modern signed drivers. The driver check ZIP is also created locally by `build-installer.ps1`.
+To help test another older PC, download `AppLimiter-Driver-Check-1.4.0.zip` from the [1.4.0 preview release](https://github.com/GulagExplorer2023/app-limiter/releases/tag/v1.4.0-rc1), extract it, then right-click `run_driver_check.cmd` and choose **Run as administrator**. Send the displayed result and the exact Windows version. If it passes, try the preview installer and test browsing, upload/download limits, blocking, restart, and several hours of service uptime. Do not run the preview installer on the Windows 7 PC that returned error 577. The driver check ZIP is also created locally by `build-installer.ps1`.
 
 ## Use it
 

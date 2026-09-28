@@ -13,6 +13,10 @@
   or 8 without installing App Limiter. This WinDivert 2.2.2 package documents
   Windows 10/11, so passing the preflight does not establish full legacy
   support. An older-PC install and sustained traffic check are still needed.
+- The first Windows 7 SP1 x64 check returned error 577 at the WinDivert flow
+  layer. The user installed KB4490628 and KB4474419, restarted, and reported
+  the same error. That machine cannot use the bundled driver. Do not claim
+  Windows 7 support or install the preview there. Windows 8/8.1 is untested.
 
 ## Code findings and fixes
 
